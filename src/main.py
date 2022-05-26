@@ -7,7 +7,7 @@ from test import distance_t_k
 
 def main():
     # For reproducibility
-    seed(0)
+    seed(1)
 
     img_path = '../img/'
     distance_k_n.run(save_path=img_path, show_plot=False) # Takes about 80 seconds
