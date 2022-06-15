@@ -13,8 +13,8 @@ from distance.mpoly_mpoly_dist import mpoly_mpoly_cfs
 from distance.v_clip import compute_s
 
 fig, ax = plt.subplots()
-pln, = ax.plot([], [], '-r')
-rln, = ax.plot([], [], '-b')
+pln, = ax.plot([], [], '-r.')
+rln, = ax.plot([], [], '-b.')
 cfln, = ax.plot([], [], '-go')
 txt = ax.text(-8, 42, '', fontsize=15)
 
@@ -29,7 +29,7 @@ mr.start_pose.theta = 0
 mr.end_pose.theta = 3.14
 cfs, _, _ = mpoly_mpoly_cfs(mp, mr)
 
-intervals = 1000
+intervals = 200
 ts = [i / intervals for i in range(intervals + 1)]
 
 
@@ -84,7 +84,7 @@ def update(t):
 
 
 ani = FuncAnimation(
-    fig, update, frames=ts, interval=15, init_func=init, blit=True)
+    fig, update, frames=ts, interval=30, init_func=init, blit=True)
 plt.show()
 
 # writergif = PillowWriter(fps=60)
