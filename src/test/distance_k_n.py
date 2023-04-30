@@ -75,6 +75,8 @@ def run(save_path=None, show_plot=True):
     ]
     for i, k_list in enumerate(k_lists_point_poly):
         plt.plot(N_LIST, k_list, label=labels[i])
+    plt.xlabel('n')
+    plt.ylabel('k', rotation=0, labelpad=15)
     plt.legend()
     plt.tight_layout()
     if save_path is not None:
@@ -92,6 +94,8 @@ def run(save_path=None, show_plot=True):
     ]
     for i, k_list in enumerate(k_lists_poly_poly):
         plt.plot([2 * n for n in N_LIST], k_list, label=labels[i])
+    plt.xlabel('n + m')
+    plt.ylabel('k', rotation=0, labelpad=15)
     plt.legend()
     plt.tight_layout()
     if save_path is not None:

@@ -120,6 +120,8 @@ def run(save_path=None, show_plot=True):
     plt.plot(
         [kt[0] for kt in pl_pl_kts], [kt[1] for kt in pl_pl_kts],
         label=labels[1])
+    plt.xlabel('k')
+    plt.ylabel('t', rotation=0, labelpad=15)
     plt.legend()
     plt.tight_layout()
     if save_path is not None:
@@ -142,6 +144,8 @@ def run(save_path=None, show_plot=True):
     plt.plot(
         [kt[0] for kt in pl_pl_kts], [kt[1] for kt in pl_pl_kts],
         label=labels[1])
+    plt.xlabel('k')
+    plt.ylabel('t', rotation=0, labelpad=15)
     plt.legend()
     plt.tight_layout()
     if save_path is not None:
