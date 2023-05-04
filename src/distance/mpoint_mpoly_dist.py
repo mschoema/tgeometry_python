@@ -1,6 +1,7 @@
 from time import process_time
 
 from classes.constants import EPSILON
+from classes.constants import LOOP_MAX_ITERS
 from distance.v_clip import mpoint_mpoly_v_clip
 
 EQ_0 = True
@@ -97,8 +98,8 @@ def mpoint_mpoly_verify_cfs(mp, mr, cfs):
 
 def mpoint_mpoly_verify_cfs_fast(mp, mr, cfs):
   t, cf = cfs[-1]
-  cf_bf = mpoint_mpoly_v_clip(mp, mr, t, cf)
-  return cf != cf_bf
+  cf_bf = mpoint_mpoly_v_clip(mp, mr, (1 + t) / 2, cf)
+  return cf == cf_bf
 
 
 # Assumptions:
@@ -166,4 +167,72 @@ def mpoint_mpoly_cfs(mp, mr):
       print("Cfs: Max iterations reached")
       break
   end = process_time()
+  return cfs, (end_0 - start_0) * 1000, (end - start) * 1000
+
+
+# Find a change in closest features between the two given features
+# Might return a redundant instant to be removed later
+def mpoint_mpoly_cfs_change(mp, mr, cft_start, cft_end):
+  t_start, cf_start = cft_start
+  t_end, cf_end = cft_end
+  t1, t2 = t_start, t_end
+  cf_middle = cf_start
+  # Search inside a bracket
+  while (t2 - t1 > EPSILON):
+    t_middle = (t2 + t1) / 2
+    cf_middle = mpoint_mpoly_v_clip(mp, mr, t_middle, cf_middle)
+    # If start == middle and end == middle, assume nothing changes
+    if (cf_start == cf_middle and cf_end == cf_middle):
+      return False, None, None
+    # If start == middle, update t1
+    elif (cf_start == cf_middle):
+      t1 = t_middle
+    # If end == middle, update t2
+    elif (cf_end == cf_middle):
+      t2 = t_middle
+    # If start != middle and end != middle, return middle
+    else:
+      # The value t_middle might not correspond to the exact
+      # transition time, but that will be determined in a future call
+      # This tuple will thus most probably be redundant at the end
+      return True, t_middle, cf_middle
+  # If t1 == t_start or t2 == t_end, no change happens
+  if (t1 == t_start or t2 == t_end):
+    return False, None, None
+  elif (cf_end == cf_middle):
+    return True, t_middle, cf_end
+  else:
+    return True, t2, cf_end
+
+
+# Iteratively finds the changes in closest features
+# In a binary search / bracketing approach
+def mpoint_mpoly_cfs_iter(mp, mr):
+  start_0 = process_time()
+  cf_start = mpoint_mpoly_v_clip(mp, mr, 0)
+  cf_end = mpoint_mpoly_v_clip(mp, mr, 1, cf_start)
+  end_0 = start = process_time()
+  # Initial and final closest features
+  cfs = [(0, cf_start), (1, cf_end)]
+  i = 1
+  loop = 0
+  while i < len(cfs):
+    # Detect a change of closest features between the given instants
+    found, t, cf = mpoint_mpoly_cfs_change(mp, mr, cfs[i - 1], cfs[i])
+    if (found):
+      cfs.insert(i, (t, cf))
+    else:
+      i += 1
+
+    loop += 1
+    if (loop == LOOP_MAX_ITERS):
+      print(f"Mpoint-Mpoly Cfs: Cycle detected")
+      break
+  end = process_time()
+  # Remove redundant instants
+  for i in range(len(cfs) - 1, 0, -1):
+    t, cf = cfs[i]
+    t_prev, cf_prev = cfs[i - 1]
+    if (cf == cf_prev):
+      cfs.pop(i)
   return cfs, (end_0 - start_0) * 1000, (end - start) * 1000

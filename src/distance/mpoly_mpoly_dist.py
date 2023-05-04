@@ -1,6 +1,7 @@
 from time import process_time
 
 from classes.constants import EPSILON
+from classes.constants import LOOP_MAX_ITERS
 from distance.v_clip import compute_s
 from distance.v_clip import mpoly_mpoly_v_clip
 
@@ -145,8 +146,8 @@ def mpoly_mpoly_verify_cfs(mr1, mr2, cfs):
 
 def mpoly_mpoly_verify_cfs_fast(mr1, mr2, cfs):
   t, cf1, cf2 = cfs[-1]
-  cf1_bf, cf2_bf = mpoly_mpoly_v_clip(mr1, mr2, t, cf1, cf2)
-  return cf1 != cf1_bf or cf2 != cf2_bf
+  cf1_bf, cf2_bf = mpoly_mpoly_v_clip(mr1, mr2, (1 + t) / 2, cf1, cf2)
+  return cf1 == cf1_bf and cf2 == cf2_bf
 
 
 # Assumptions:
@@ -298,4 +299,73 @@ def mpoly_mpoly_cfs(mr1, mr2):
       print("Cfs: Max iterations reached")
       break
   end = process_time()
+  return cfs, (end_0 - start_0) * 1000, (end - start) * 1000
+
+
+# Find a change in closest features between the two given features
+# Might return a redundant instant to be removed later
+def mpoly_mpoly_cfs_change(mr1, mr2, cft_start, cft_end):
+  t_start, cf1_start, cf2_start = cft_start
+  t_end, cf1_end, cf2_end = cft_end
+  t1, t2 = t_start, t_end
+  cf1_middle, cf2_middle = cf1_start, cf2_start
+  while (t2 - t1 > EPSILON):
+    t_middle = (t2 + t1) / 2
+    cf1_middle, cf2_middle = mpoly_mpoly_v_clip(mr1, mr2, t_middle, cf1_middle,
+                                                cf2_middle)
+    # If start == middle and end == middle, assume nothing changes
+    if (cf1_start == cf1_middle and cf2_start == cf2_middle
+        and cf1_end == cf1_middle and cf2_end == cf2_middle):
+      return False, None, None, None
+    # If start == middle, update t1
+    elif (cf1_start == cf1_middle and cf2_start == cf2_middle):
+      t1 = t_middle
+    # If end == middle, update t2
+    elif (cf1_end == cf1_middle and cf2_end == cf2_middle):
+      t2 = t_middle
+    # If start != middle and end != middle, return middle
+    else:
+      # The value t_middle might not correspond to the exact
+      # transition time, but that will be determined in a future call
+      # This tuple will thus most probably be redundant at the end
+      return True, t_middle, cf1_middle, cf2_middle
+  # If t1 == t_start or t2 == t_end, no change happens
+  if (t1 == t_start or t2 == t_end):
+    return False, None, None, None
+  elif (cf1_end == cf1_middle and cf2_end == cf2_middle):
+    return True, t_middle, cf1_end, cf2_end
+  else:
+    return True, t2, cf1_end, cf2_end
+
+
+# Iteratively finds the changes in closest features
+# In a binary search / bracketing approach
+def mpoly_mpoly_cfs_iter(mr1, mr2):
+  start_0 = process_time()
+  cf1_start, cf2_start = mpoly_mpoly_v_clip(mr1, mr2, 0)
+  cf1_end, cf2_end = mpoly_mpoly_v_clip(mr1, mr2, 1, cf1_start, cf2_start)
+  end_0 = start = process_time()
+  # Initial and final closest features
+  cfs = [(0, cf1_start, cf2_start), (1, cf1_end, cf2_end)]
+  i = 1
+  loop = 0
+  while i < len(cfs):
+    # Detect a change of closest features between the given instants
+    found, t, cf1, cf2 = mpoly_mpoly_cfs_change(mr1, mr2, cfs[i - 1], cfs[i])
+    if (found):
+      cfs.insert(i, (t, cf1, cf2))
+    else:
+      i += 1
+
+    loop += 1
+    if (loop == LOOP_MAX_ITERS):
+      print(f"Mpoly-Mpoly Cfs: Cycle detected")
+      break
+  end = process_time()
+  # Remove redundant instants
+  for i in range(len(cfs) - 1, 0, -1):
+    t, cf1, cf2 = cfs[i]
+    t_prev, cf1_prev, cf2_prev = cfs[i - 1]
+    if (cf1 == cf1_prev and cf2 == cf2_prev):
+      cfs.pop(i)
   return cfs, (end_0 - start_0) * 1000, (end - start) * 1000

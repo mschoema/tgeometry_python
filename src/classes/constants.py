@@ -1,1 +1,2 @@
 EPSILON = 1e-6
+LOOP_MAX_ITERS = 1e5
